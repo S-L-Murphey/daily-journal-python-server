@@ -42,3 +42,29 @@ def get_all_entries():
     # Use `json` package to properly serialize list as JSON
     return json.dumps(entries)
 
+def get_single_entry(id):
+    with sqlite3.connect("./dailyjournal.db") as conn:
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
+
+        # Use a ? parameter to inject a variable's value
+        # into the SQL statement.
+        db_cursor.execute("""
+       SELECT
+            a.id,
+            a.date,
+            a.concept,
+            a.entry,
+            a.mood_id
+        FROM entry a
+        WHERE a.id = ?
+        """, ( id, ))
+
+        # Load the single result into memory
+        data = db_cursor.fetchone()
+
+        # Create an animal instance from the current row
+        entry = Entry(data['id'], data['date'], data['concept'],
+                            data['entry'], data['mood_id'])
+
+        return json.dumps(entry.__dict__)

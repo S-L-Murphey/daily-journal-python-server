@@ -1,5 +1,5 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from entries import get_all_entries
+from entries import get_all_entries, get_single_entry
 
 
 # Here's a class. It inherits from another class.
@@ -11,7 +11,27 @@ class HandleRequests(BaseHTTPRequestHandler):
     # It gives a description of the class or function
     """Controls the functionality of any GET, PUT, POST, DELETE requests to the server
     """
+    def parse_url(self, path):
+        # Just like splitting a string in JavaScript. If the
+        # path is "/animals/1", the resulting list will
+        # have "" at index 0, "animals" at index 1, and "1"
+        # at index 2.
+        path_params = path.split("/")
+        resource = path_params[1]
+        id = None
 
+        # Try to get the item at index 2
+        try:
+            # Convert the string "1" to the integer 1
+            # This is the new parseInt()
+            id = int(path_params[2])
+        except IndexError:
+            pass  # No route parameter exists: /animals
+        except ValueError:
+            pass  # Request had trailing slash: /animals/
+
+        return (resource, id)  # This is a tuple
+    
     # Here's a class function
     def _set_headers(self, status):
         # Notice this Docstring also includes information about the arguments passed to the function
@@ -43,9 +63,14 @@ class HandleRequests(BaseHTTPRequestHandler):
         """
         self._set_headers(200)
         response = {}  # Default response
+        # Parse the URL and capture the tuple that is returned
+        (resource, id) = self.parse_url(self.path)
        
-        if self.path == "/entries":
-            response = f"{get_all_entries()}"
+        if resource == "entries":
+            if id is not None:
+                response = f"{get_single_entry(id)}"
+            else:
+                response = f"{get_all_entries()}"
 
         self.wfile.write(response.encode())
 
