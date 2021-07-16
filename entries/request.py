@@ -1,6 +1,7 @@
 import sqlite3
 import json
 from models import Entry
+from models import Mood
 
 def get_all_entries():
     # Open a connection to the database
@@ -17,8 +18,11 @@ def get_all_entries():
             a.date,
             a.concept,
             a.entry,
-            a.mood_id
+            a.mood_id,
+            m.title mood_title
         FROM entry a
+        JOIN Moods m
+            ON m.id = a.mood_id 
         """)
 
         # Initialize an empty list to hold all entry representations
@@ -36,6 +40,10 @@ def get_all_entries():
             # Entry class above.
             entry = Entry(row['id'], row['date'], row['concept'],
                             row['entry'], row['mood_id'])
+
+            mood = Mood(row['mood_id'], row['mood_title'])
+
+            entry.mood = mood.__dict__
 
             entries.append(entry.__dict__)
 
@@ -77,3 +85,28 @@ def delete_entry(id):
         DELETE FROM entry
         WHERE id = ?
         """, (id, ))
+
+def create_entry(new_entry):
+    with sqlite3.connect("./dailyjournal.db") as conn:
+        db_cursor = conn.cursor()
+
+        db_cursor.execute("""
+        INSERT INTO Entry
+            ( date, concept, entry, mood_id )
+        VALUES
+            ( ?, ?, ?, ?);
+        """, (new_entry['date'], new_entry['concept'],
+              new_entry['entry'], new_entry['mood_id'], ))
+
+        # The `lastrowid` property on the cursor will return
+        # the primary key of the last thing that got added to
+        # the database.
+        id = db_cursor.lastrowid
+
+        # Add the `id` property to the animal dictionary that
+        # was sent by the client so that the client sees the
+        # primary key in the response.
+        new_entry['id'] = id
+
+
+    return json.dumps(new_entry)

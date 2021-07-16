@@ -1,5 +1,6 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
-from entries import get_all_entries, get_single_entry, delete_entry
+import json
+from entries import get_all_entries, get_single_entry, delete_entry, create_entry
 
 
 # Here's a class. It inherits from another class.
@@ -80,13 +81,27 @@ class HandleRequests(BaseHTTPRequestHandler):
     def do_POST(self):
         """Handles POST requests to the server
         """
-        # Set response code to 'Created'
         self._set_headers(201)
-
         content_len = int(self.headers.get('content-length', 0))
         post_body = self.rfile.read(content_len)
-        response = f"received post request:<br>{post_body}"
-        self.wfile.write(response.encode())
+
+        # Convert JSON string to a Python dictionary
+        post_body = json.loads(post_body)
+
+        # Parse the URL
+        (resource, id) = self.parse_url(self.path)
+
+        # Initialize new journal entry
+        new_entry = None
+
+        # Add a new journal entry to the list. Don't worry about
+        # the orange squiggle, you'll define the create_entry
+        # function next.
+        if resource == "entries":
+            new_entry = create_entry(post_body)
+
+        # Encode the new entry and send in response
+        self.wfile.write(f"{new_entry}".encode())
 
     # Here's a method on the class that overrides the parent's method.
     # It handles any PUT request.
