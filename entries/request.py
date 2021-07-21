@@ -79,12 +79,41 @@ def get_single_entry(id):
 
 def delete_entry(id):
     with sqlite3.connect("./dailyjournal.db") as conn:
+        
         db_cursor = conn.cursor()
 
         db_cursor.execute("""
         DELETE FROM entry
         WHERE id = ?
         """, (id, ))
+
+def get_entry_by_search(search):
+    with sqlite3.connect("./dailyjournal.db") as conn:
+
+        conn.row_factory = sqlite3.Row
+        db_cursor = conn.cursor()
+        db_cursor.execute(f"""
+        SELECT
+            a.id,
+            a.date,
+            a.concept,
+            a.entry,
+            a.mood_id
+        FROM entry a
+        WHERE entry LIKE "%{search}%"
+        """)
+
+        entries = []
+        dataset = db_cursor.fetchall()
+
+        for row in dataset:
+            entry = Entry(row['id'], row['date'], row['concept'],
+                            row['entry'], row['mood_id'])
+            
+            entries.append(entry.__dict__)
+
+    return json.dumps(entries)
+
 
 def create_entry(new_entry):
     with sqlite3.connect("./dailyjournal.db") as conn:
@@ -96,12 +125,15 @@ def create_entry(new_entry):
         VALUES
             ( ?, ?, ?, ?);
         """, (new_entry['date'], new_entry['concept'],
-              new_entry['entry'], new_entry['mood_id'], ))
+              new_entry['entry'], new_entry['mood_id'], new_entry['Entry_tag'] ))
 
         # The `lastrowid` property on the cursor will return
         # the primary key of the last thing that got added to
         # the database.
         id = db_cursor.lastrowid
+       
+        #add tags loop
+
 
         # Add the `id` property to the animal dictionary that
         # was sent by the client so that the client sees the
@@ -125,7 +157,7 @@ def update_entry(id, new_entry):
         WHERE id = ?
         """, (new_entry['date'], new_entry['concept'],
               new_entry['entry'], new_entry['mood_id'], id, ))
-
+        
         # Were any rows affected?
         # Did the client send an `id` that exists?
         rows_affected = db_cursor.rowcount

@@ -1,6 +1,6 @@
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
-from entries import get_all_entries, get_single_entry, delete_entry, create_entry, update_entry
+from entries import get_all_entries, get_single_entry, delete_entry, create_entry, update_entry, get_entry_by_search
 
 
 # Here's a class. It inherits from another class.
@@ -13,25 +13,33 @@ class HandleRequests(BaseHTTPRequestHandler):
     """Controls the functionality of any GET, PUT, POST, DELETE requests to the server
     """
     def parse_url(self, path):
-        # Just like splitting a string in JavaScript. If the
-        # path is "/animals/1", the resulting list will
-        # have "" at index 0, "animals" at index 1, and "1"
-        # at index 2.
         path_params = path.split("/")
         resource = path_params[1]
-        id = None
 
-        # Try to get the item at index 2
-        try:
-            # Convert the string "1" to the integer 1
-            # This is the new parseInt()
-            id = int(path_params[2])
-        except IndexError:
-            pass  # No route parameter exists: /animals
-        except ValueError:
-            pass  # Request had trailing slash: /animals/
+        # Check if there is a query string parameter
+        if "?" in resource:
+            # GIVEN: /entries?entry=Python
 
-        return (resource, id)  # This is a tuple
+            param = resource.split("?")[1]  # entry=Python
+            resource = resource.split("?")[0]  # 'entries'
+            pair = param.split("=")  # [ 'entry', 'Python' ]
+            key = pair[0]  # 'entry'
+            value = pair[1]  # 'Python'
+
+            return ( resource, key, value )
+
+        # No query string parameter
+        else:
+            id = None
+
+            try:
+                id = int(path_params[2])
+            except IndexError:
+                pass  # No route parameter exists: /animals
+            except ValueError:
+                pass  # Request had trailing slash: /animals/
+
+            return (resource, id)
     
     # Here's a class function
     def _set_headers(self, status):
@@ -64,14 +72,24 @@ class HandleRequests(BaseHTTPRequestHandler):
         """
         self._set_headers(200)
         response = {}  # Default response
+        # Parse URL and store entire tuple in a variable
+        parsed = self.parse_url(self.path)
+        
         # Parse the URL and capture the tuple that is returned
-        (resource, id) = self.parse_url(self.path)
-       
-        if resource == "entries":
-            if id is not None:
-                response = f"{get_single_entry(id)}"
-            else:
-                response = f"{get_all_entries()}"
+        #(resource, id) = self.parse_url(self.path)
+        if len(parsed) == 2:
+            ( resource, id ) = parsed
+            if resource == "entries":
+                if id is not None:
+                    response = f"{get_single_entry(id)}"
+                else:
+                    response = f"{get_all_entries()}"
+
+        elif len(parsed) == 3:
+            ( resource, key, value ) = parsed
+
+            if resource == "entries" and key == "entry":
+                response = f"{get_entry_by_search(value)}"
 
         self.wfile.write(response.encode())
 
